@@ -1,0 +1,29 @@
+#!/bin/sh
+exec 2>&1
+
+PACKAGE=/data/rvforefish
+DATA_DIR=/data/rvforefish-data
+CONFIG="$DATA_DIR/config.json"
+STATE_MARKER="$DATA_DIR/state/own-generator-demand"
+
+# PackageManager may reinstall services before VE.Can and stock RV-C are
+# ready. Bound the wait and let runit retry rather than starting partially.
+i=0
+while ! ip link show vecan0 >/dev/null 2>&1 || \
+      ! ps w | grep -q '[d]bus-rv-c.*vecan0'; do
+    i=$((i + 1))
+    if test "$i" -ge 60; then
+        echo "stock dbus-rv-c on vecan0 was not ready within 120 seconds" >&2
+        exit 111
+    fi
+    sleep 2
+done
+
+PACKAGE="$PACKAGE" DATA_DIR="$DATA_DIR" \
+    "$PACKAGE/scripts/runtime-preflight.sh" || exit 111
+
+cd "$PACKAGE" || exit 111
+export PYTHONPATH="$PACKAGE/src"
+exec python3 -u -m foretravel_rvc.main \
+    --config "$CONFIG" \
+    --state-marker "$STATE_MARKER"
