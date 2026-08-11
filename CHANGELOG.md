@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.5.0~4 - initial SetupHelper candidate
+## v0.5.0b4 - initial SetupHelper candidate
 
 - Import the exact `0.5.0-rc4` source currently deployed on the Foretravel
   Cerbo GX.
