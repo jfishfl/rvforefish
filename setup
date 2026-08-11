@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# SetupHelper entry point for the Foretravel SilverLeaf RV-C bridge.
+# Application configuration and ownership state live outside the downloaded
+# package so GitHub updates cannot silently replace safety settings.
+
+source "/data/SetupHelper/HelperResources/IncludeHelpers"
+
+configDir="/data/rvforefish-data"
+configFile="$configDir/config.json"
+stateDir="$configDir/state"
+ownershipMarker="$stateDir/own-generator-demand"
+serviceName="foretravel-rvc"
+servicePath="/service/$serviceName"
+installedServices="/etc/venus/installedModifications/installedServices-rvforefish"
+
+if [ "$scriptAction" == "NONE" ]; then
+    standardActionPrompt
+fi
+
+if [ "$scriptAction" == "INSTALL" ]; then
+    # Never replace a manually managed or unrelated service. The existing
+    # /data/apps deployment must be migrated explicitly and can remain as the
+    # rollback target.
+    if [ -L "$servicePath" ]; then
+        setInstallFailed "$EXIT_PACKAGE_CONFLICT" \
+            "$servicePath is a symlink; disable the legacy deployment before installing rvforefish"
+    elif [ -e "$servicePath" ] && \
+         { [ ! -f "$installedServices" ] || ! grep -qx "$serviceName" "$installedServices"; }; then
+        setInstallFailed "$EXIT_PACKAGE_CONFLICT" \
+            "$servicePath is not owned by rvforefish; refusing to replace it"
+    fi
+fi
+
+if [ "$scriptAction" == "INSTALL" ]; then
+    mkdir -p "$stateDir"
+    chmod 700 "$configDir" "$stateDir"
+
+    if [ ! -f "$configFile" ]; then
+        cp "$scriptDir/config.default.json" "$configFile"
+        chmod 600 "$configFile"
+        logMessage "created fail-closed configuration at $configFile"
+    fi
+
+    if ! PYTHONPATH="$scriptDir/src" python3 -m foretravel_rvc.main \
+        --config "$configFile" --validate-config; then
+        setInstallFailed "$EXIT_OPTIONS_NOT_SET" \
+            "invalid rvforefish configuration: $configFile"
+    fi
+fi
+
+if [ "$scriptAction" == "INSTALL" ] && [ -e "$ownershipMarker" ]; then
+    # An update while the bridge owns generator demand is permitted only when
+    # the preserved configuration can transmit the source-specific release.
+    if ! PYTHONPATH="$scriptDir/src" python3 -c \
+        'import sys; from foretravel_rvc.config import load_config; c=load_config(sys.argv[1]); raise SystemExit(0 if c.feature_can_transmit("generator_demand") else 1)' \
+        "$configFile"; then
+        setInstallFailed "$EXIT_OPTIONS_NOT_SET" \
+            "generator ownership marker exists but the preserved configuration cannot release demand"
+    fi
+fi
+
+if [ "$scriptAction" == "UNINSTALL" ] && [ -e "$ownershipMarker" ]; then
+    logMessage "refusing uninstall while generator-demand ownership marker exists"
+    exit "${EXIT_PACKAGE_CONFLICT:-1}"
+fi
+
+endScript 'INSTALL_SERVICES'

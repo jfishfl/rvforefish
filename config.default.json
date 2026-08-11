@@ -1,0 +1,31 @@
+{
+  "interface": "vecan0",
+  "tm102_source": 250,
+  "source_address": null,
+  "monitor_only": true,
+  "genset_device_instance": 40,
+  "switch_device_instance": 50,
+  "temperature_device_instance_base": 60,
+  "features": {
+    "water_pump": {"enabled": false, "payload_validated": false},
+    "autofill_stop": {"enabled": false, "payload_validated": false},
+    "autofill_start": {"enabled": false, "payload_validated": false},
+    "generator_demand": {"enabled": false, "payload_validated": false}
+  },
+  "generator_orphan_demand_test_passed": false,
+  "generator_unload_test_passed": false,
+  "autofill_interlocks_verified": false,
+  "source_label_writes": false,
+  "authoritative_source_signal_verified": false,
+  "ack_timeout_seconds": 2.0,
+  "max_retries": 2,
+  "status_max_age_seconds": 7.0,
+  "generator_cooldown_seconds": 300.0,
+  "generator_keepalive_seconds": 60.0,
+  "generator_start_timeout_seconds": 120.0,
+  "generator_max_run_seconds": null,
+  "generator_unloaded_current_threshold_amps": null,
+  "generator_unloaded_confirm_seconds": 30.0,
+  "generator_stop_escalation_seconds": null,
+  "autofill_max_run_seconds": null
+}
